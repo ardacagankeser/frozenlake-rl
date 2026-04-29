@@ -1,0 +1,17 @@
+{
+    "env_size": 4,
+    "pop_size": 100,
+    "max_generations": 100,
+    "mutation_rate": 0.1,
+    "crossover_rate": 0.8,
+    "tournament_size": 3,
+    "crossover_method": "one_point",
+    "mutation_method": "random_resetting",
+    "strategy": "mu_plus_lambda",
+    "fitness_weights": {
+        "success": 100.0,
+        "manhattan_multiplier": 10.0,
+        "step_penalty": 0.1,
+        "hole_penalty": 50.0
+    }
+}
