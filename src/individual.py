@@ -8,6 +8,7 @@ class Individual:
             # 0: Left, 1: Down, 2: Right, 3: Up
             self.genotype = np.random.randint(0, 4, size=genotype_length)
         
+        # initialize fitness with -inf to ensure any valid fitness is better
         self.fitness = -float('inf')
         self.success = 0
         self.steps = 0

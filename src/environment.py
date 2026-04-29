@@ -13,8 +13,8 @@ class Environment:
 
     def evaluate_policy(self, policy, weights):
         state, info = self.env.reset()
-        terminated = False
-        truncated = False
+        terminated = False  # episode is terminated if the agent falls into a hole or reaches the goal
+        truncated = False   # episode is truncated if the agent takes too many steps
         steps = 0
         success = 0
         fell_into_hole = 0
