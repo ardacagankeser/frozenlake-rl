@@ -1,0 +1,2 @@
+T-Test between mu_comma_lambda_two_point_random_resetting and mu_comma_lambda_uniform_scramble
+P-Value: 0.9942497588603786

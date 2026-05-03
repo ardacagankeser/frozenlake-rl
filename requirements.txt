@@ -2,3 +2,6 @@ gymnasium==0.29.1
 numpy
 matplotlib
 pandas
+imageio
+scipy
+seaborn

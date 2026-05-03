@@ -1,6 +1,9 @@
 import numpy as np
 from src.individual import Individual
-from src.ga_operators import tournament_selection, one_point_crossover, uniform_crossover, random_resetting_mutation, swap_mutation
+from src.ga_operators import (
+    tournament_selection, one_point_crossover, two_point_crossover, uniform_crossover, 
+    random_resetting_mutation, swap_mutation, insert_mutation, scramble_mutation, inversion_mutation
+)
 
 class GeneticAlgorithm:
     def __init__(self, config, environment):
@@ -34,6 +37,8 @@ class GeneticAlgorithm:
         if np.random.rand() < self.crossover_rate:
             if self.crossover_method == "one_point":
                 return one_point_crossover(parent1, parent2)
+            elif self.crossover_method == "two_point":
+                return two_point_crossover(parent1, parent2)
             elif self.crossover_method == "uniform":
                 return uniform_crossover(parent1, parent2)
         return parent1.clone(), parent2.clone()
@@ -43,6 +48,12 @@ class GeneticAlgorithm:
             random_resetting_mutation(individual, self.mutation_rate)
         elif self.mutation_method == "swap":
             swap_mutation(individual, self.mutation_rate)
+        elif self.mutation_method == "insert":
+            insert_mutation(individual, self.mutation_rate)
+        elif self.mutation_method == "scramble":
+            scramble_mutation(individual, self.mutation_rate)
+        elif self.mutation_method == "inversion":
+            inversion_mutation(individual, self.mutation_rate)
 
     def generate_offspring(self):
         offspring = []
@@ -94,9 +105,5 @@ class GeneticAlgorithm:
             gen_best = max(self.population, key=lambda ind: ind.fitness)
             if gen_best.fitness > best_overall.fitness:
                 best_overall = gen_best.clone()
-
-            # Optional: Add early stopping if success=1 and we want to stop
-            # if best_overall.success == 1:
-            #     pass 
 
         return best_overall, self.history

@@ -1,28 +1,50 @@
 import gymnasium as gym
+from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 
 class Environment:
-    def __init__(self, size=4):
+    def __init__(self, size=4, desc=None, render_mode=None):
         self.size = size
-        self.map_name = "4x4" if size == 4 else "8x8"
-        self.env = gym.make('FrozenLake-v1', map_name=self.map_name, is_slippery=False)
+        self.render_mode = render_mode
+        
+        if desc is not None:
+            self.map_name = None
+            self.desc = desc
+        elif size == 4:
+            self.map_name = "4x4"
+            self.desc = None
+        elif size == 8:
+            self.map_name = "8x8"
+            self.desc = None
+        else:
+            self.map_name = None
+            self.desc = generate_random_map(size=size)
+            
+        self.env = gym.make('FrozenLake-v1', desc=self.desc, map_name=self.map_name, is_slippery=False, render_mode=self.render_mode)
         self.goal_pos = (size - 1, size - 1)
         self.max_steps = size * size * 2
 
     def get_genotype_length(self):
         return self.size * self.size
 
-    def evaluate_policy(self, policy, weights):
+    def evaluate_policy(self, policy, weights, render=False):
         state, info = self.env.reset()
-        terminated = False  # episode is terminated if the agent falls into a hole or reaches the goal
-        truncated = False   # episode is truncated if the agent takes too many steps
+        terminated = False
+        truncated = False
         steps = 0
         success = 0
         fell_into_hole = 0
+
+        frames = []
+        if render and self.render_mode == "rgb_array":
+            frames.append(self.env.render())
 
         while not terminated and not truncated and steps < self.max_steps:
             action = policy[state]
             state, reward, terminated, truncated, info = self.env.step(action)
             steps += 1
+            
+            if render and self.render_mode == "rgb_array":
+                frames.append(self.env.render())
 
             if terminated:
                 if reward == 1.0:
@@ -40,4 +62,6 @@ class Environment:
                   (steps * weights['step_penalty']) - \
                   (fell_into_hole * weights['hole_penalty'])
 
+        if render:
+            return fitness, success, steps, frames
         return fitness, success, steps
