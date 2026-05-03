@@ -1,4 +1,4 @@
-Weight Config,Avg Steps,Success Rate
-Standard,100.0,0.0
-Heavy_Hole_Penalty,100.0,0.0
-Heavy_Step_Penalty,5.0,0.0
+Weight Config,Avg Fitness,Success Rate,Avg Steps
+Standard,108.6,1.0,14.0
+Heavy_Hole_Penalty,85.16571428571429,0.8,31.2
+Heavy_Step_Penalty,-51.28571428571429,0.0,1.0
