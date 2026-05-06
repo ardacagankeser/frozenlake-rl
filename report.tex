@@ -1,0 +1,715 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{multirow}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{Evolving Navigation Policies for FrozenLake-v1 Using Genetic Algorithms:\\
+An Empirical Study of Operator Selection, Parameter Sensitivity, and Fitness Shaping}
+
+\author{
+\IEEEauthorblockN{[Author 1]}
+\IEEEauthorblockA{\textit{[Department]} \\
+\textit{[Institution]}\\
+[City, Country] \\
+[email]}
+\and
+\IEEEauthorblockN{[Author 2]}
+\IEEEauthorblockA{\textit{[Department]} \\
+\textit{[Institution]}\\
+[City, Country] \\
+[email]}
+\and
+\IEEEauthorblockN{[Author 3]}
+\IEEEauthorblockA{\textit{[Department]} \\
+\textit{[Institution]}\\
+[City, Country] \\
+[email]}
+}
+
+\maketitle
+
+% ---------------------------------------------------------------
+\begin{abstract}
+Sparse-reward navigation tasks challenge conventional reinforcement learning because
+the agent receives informative feedback only at terminal states, making per-step
+credit assignment difficult.
+Direct policy search via genetic algorithms (GAs) bypasses this difficulty by encoding
+a complete state-to-action mapping as an evolvable genotype and evaluating it through
+episode-level fitness.
+This paper presents an empirical study of GA-based direct policy search on the
+deterministic $8\times8$ FrozenLake-v1 benchmark.
+Each individual encodes a tabular policy of 64 discrete actions; a shaped fitness
+function combines a goal-success reward, a Manhattan-distance potential, a per-step
+cost, and a hole-fall penalty to provide informative gradients across the sparse
+landscape.
+Three research questions are investigated: which combination of crossover operator,
+mutation operator, and replacement strategy achieves the best performance; how
+sensitive GA performance is to operator rates, population size, and tournament size;
+and how fitness weight choices alter evolved behavior.
+Results show that five of thirty tested operator combinations consistently achieve
+the theoretical maximum fitness of 108.60 with 100\% success rate and zero
+run-to-run variance.
+Rate sensitivity analysis reveals that a mutation rate of 0.01 is critically
+dependent on crossover rate, while a rate of 0.2 achieves peak fitness regardless
+of crossover configuration.
+An aggressive step penalty of 2.0 per step collapses performance to 0\% success,
+demonstrating that shaping balance is as critical as operator design.
+A scalability study reveals qualitatively distinct convergence regimes: the
+$8\times8$ grid reaches a high-fitness plateau by generation~20, the $16\times16$
+grid converges much later via step-like jumps and reaches a comparable plateau only
+after generation~100, while the $32\times32$ grid fails to improve meaningfully
+within the same generation budget.
+\end{abstract}
+
+\begin{IEEEkeywords}
+genetic algorithm, direct policy search, FrozenLake, reinforcement learning,
+fitness shaping, operator selection, parameter sensitivity, fitness landscape
+\end{IEEEkeywords}
+
+% ---------------------------------------------------------------
+\section{Introduction}
+
+Reinforcement learning (RL) provides a principled framework for sequential
+decision-making, but sparse reward settings---where the reward signal is issued only
+at terminal states---introduce a severe credit-assignment problem.
+Value-function-based methods struggle to propagate meaningful learning signals
+backward through long trajectories when feedback is so infrequent~\cite{b1}.
+Evolutionary computation (EC) offers a complementary approach: by encoding a complete
+policy as a chromosome and evaluating it through full-episode fitness, the selection
+signal naturally reflects trajectory-level performance without requiring per-step
+gradient information.
+
+FrozenLake-v1 is a canonical gridworld benchmark in which an agent must navigate an
+$N\times N$ frozen surface from a start cell to a goal cell while avoiding holes.
+In the deterministic (non-slippery) variant, the transition function is fully specified,
+making it a tractable but non-trivial benchmark for policy search: the policy space
+is large ($4^{N^2}$ possible deterministic policies), rewards are sparse (0 at every
+step, 1 only upon reaching the goal), and outcomes are binary.
+Its simplicity makes it useful for controlled empirical study, while its sparsity
+motivates the use of fitness shaping.
+
+This paper applies GA direct policy search to the deterministic $8\times8$
+FrozenLake-v1 environment.
+Each individual encodes a tabular policy as a 64-gene integer chromosome, with genes
+representing discrete actions \{Left, Down, Right, Up\} for each state.
+A multi-component fitness function provides gradient information beyond the sparse
+binary reward.
+The GA operates over 100 generations with a population of 100 individuals.
+
+The objectives of this work are:
+\begin{itemize}
+\item Identify which combination of crossover method, mutation method, and
+      replacement strategy produces the highest and most consistent fitness
+      on the $8\times8$ map.
+\item Quantify the sensitivity of GA performance to mutation rate, crossover rate,
+      population size, and tournament size.
+\item Determine how fitness weight configuration affects evolved behavior,
+      comparing standard shaping against heavy hole and step penalties.
+\item Characterize how GA convergence changes as grid size increases from
+      $8\times8$ to $16\times16$ and $32\times32$.
+\end{itemize}
+
+\textbf{Contributions of this work}:
+\begin{itemize}
+\item An exhaustive comparison of all 30 operator-strategy combinations
+      ($3$ crossovers $\times$ $5$ mutations $\times$ $2$ replacement strategies)
+      with statistical testing on a fixed deterministic $8\times8$ FrozenLake-v1 map.
+\item Heatmap-based sensitivity analysis over mutation/crossover rates and
+      population/tournament sizes.
+\item An empirical demonstration that an overly aggressive step penalty
+      (2.0 per step) completely destabilizes GA convergence, identifying a
+      critical fitness-shaping failure mode.
+\item A scalability study across $8\times8$, $16\times16$, and $32\times32$ grids
+      revealing qualitatively distinct convergence regimes, including complete
+      convergence failure for $32\times32$ under a fixed generation budget.
+\end{itemize}
+
+The remainder of this paper is organized as follows.
+Section~II reviews related work.
+Section~III describes the methodology.
+Section~IV presents experimental results.
+Section~V concludes with a discussion of findings and future directions.
+
+% ---------------------------------------------------------------
+\section{Literature Review}
+
+Genetic algorithms have been established as a principled approach to reinforcement
+learning policy search.
+Whiteson~\cite{b1} characterizes direct policy search---encoding a complete
+state-to-action mapping as an evolvable individual---as particularly suited to
+sparse-reward, discrete-action environments, because episode-level fitness naturally
+handles the credit-assignment problem that challenges value-function methods.
+Tournament selection is identified as providing tunable selection pressure through a
+single parameter, directly motivating our configurable tournament size.
+Faycal and Zito~\cite{b2} apply this framework directly to FrozenLake-v1, evolving
+neural-network weights and demonstrating that two operator modifications
+(multi-step mutation and directed crossover) reduce convergence from over 500 to
+under 150 generations (Mann-Whitney~U, $p < 0.01$).
+Though their representation is neural-network weights whereas ours is a tabular direct
+encoding, the core result---that crossover and mutation operator choice substantially
+alters convergence speed---directly motivates Experiment~1.
+
+The systematic analysis of operator combinations and parameter interactions is the
+focus of two complementary works.
+Song et al.~\cite{b3} survey reinforcement learning-assisted evolutionary algorithms
+(RL-EA) across five integration categories and identify adaptive operator selection as
+consistently outperforming fixed-operator configurations in convergence speed and
+solution quality.
+Ma et al.~\cite{b4} provide a concrete instantiation: a deep reinforcement learning
+agent (double DQN) selects both operator type and rates at each generation for
+flexible job shop scheduling, outperforming fixed-rate baselines.
+Their finding that adapting both operator type and rate is necessary---neither alone
+suffices---motivates our systematic separation of operator-type comparison
+(Experiment~1) from rate sensitivity (Experiments~2a and~2b).
+
+Fitness function design is a critical dimension of GA-based navigation.
+Zhu et al.~\cite{b5} demonstrate that potential-based reward shaping, integrated with
+a genetic local search framework, can increase cumulative reward by up to 39.6\% in
+sparse-reward gridworld tasks while reducing training variance.
+Their theoretical result---that potential-based shaping is policy-preserving---provides
+formal justification for our Manhattan-distance term, which assigns non-zero fitness to
+every episode and acts as a surrogate potential over the goal-distance landscape.
+Experiment~2c directly tests the sensitivity of this shaping design.
+
+The theoretical framework for interpreting our empirical sensitivities is provided by
+fitness landscape theory.
+Srivastava et al.~\cite{b6} formalise navigability as the probability of reaching the
+global fitness peak via mutation and selection, showing that sign epistasis---where a
+mutation's fitness effect reverses depending on genetic background---demands a careful
+exploration--exploitation balance.
+The FrozenLake policy space ($4^{64} \approx 3.4\times10^{38}$ possible policies) is
+highly epistatic: changing the action at a single state adjacent to a hole can flip
+fitness from maximum to minimum.
+This landscape structure informs the expected sensitivities in Experiments~2a, 2b,
+and~3, where the fitness landscape becomes progressively more rugged as grid size grows.
+Together, these six studies establish the theoretical and empirical foundations of our
+investigation, spanning GA direct policy search~\cite{b1,b2}, operator and parameter
+analysis~\cite{b3,b4}, fitness shaping~\cite{b5}, and landscape theory~\cite{b6}.
+
+% ---------------------------------------------------------------
+\section{Methodology}
+
+\subsection{Environment Setup}
+
+The environment is FrozenLake-v1 from Gymnasium, configured with
+\texttt{is\_slippery=False} for fully deterministic transitions.
+The default grid size is $8\times8$ (64 states).
+A single random map is generated via \texttt{generate\_random\_map(size=8)} before any
+experiment begins and reused identically across all experimental conditions, ensuring a
+fair comparison across operator variants and parameter settings.
+The goal is at state index $(7,7)$ (bottom-right corner).
+The maximum episode length is capped at
+$\textit{max\_steps} = \textit{size}^{2} \times 2 = 128$ steps.
+Evaluation is single-episode per individual; because the environment is deterministic,
+single-episode fitness is fully reproducible for a fixed genotype and map.
+
+\subsection{Individual Representation}
+
+Each individual encodes a complete deterministic tabular policy as a fixed-length
+integer chromosome of length 64 (one gene per state).
+Each gene takes a value in $\{0,1,2,3\}$, corresponding to actions
+\{Left, Down, Right, Up\} respectively.
+Initialization is uniform random over $\{0,1,2,3\}$ for all genes.
+This direct encoding avoids function approximation and supports a clean study of
+operator effects on a discrete policy space.
+
+\subsection{Fitness Function}
+
+The fitness of an individual is computed from a single episode as:
+\begin{equation}
+F = s \cdot w_s + \frac{w_m}{1 + d_{\text{Manhattan}}} - t \cdot w_{\text{step}} - h \cdot w_h
+\label{eq:fitness}
+\end{equation}
+
+\noindent where $s \in \{0,1\}$ indicates goal-reaching success;
+$d_{\text{Manhattan}}$ is the Manhattan distance from the agent's terminal state to
+the goal; $t$ is the number of steps taken; $h \in \{0,1\}$ indicates whether the
+agent fell into a hole.
+Default weights from \texttt{config.json}: $w_s = 100.0$, $w_m = 10.0$,
+$w_{\text{step}} = 0.1$, $w_h = 50.0$.
+
+The Manhattan-distance term in \eqref{eq:fitness} provides a non-zero gradient signal
+across all episodes regardless of goal-reaching success, acting as a surrogate
+potential function analogous to the potential-based shaping mechanisms
+of~\cite{b5}.
+Under default weights with optimal navigation ($s=1$, $d=0$, $t=14$), the theoretical
+maximum fitness is $F_{\max} = 100 + 10 - 1.4 = 108.60$.
+
+\subsection{Genetic Algorithm Pipeline}
+
+The GA loop proceeds as follows:
+\begin{enumerate}
+\item \textit{Initialization}: Generate $\mu = 100$ individuals with uniformly random genotypes.
+\item \textit{Evaluation}: Single-episode fitness evaluation for each individual.
+\item \textit{Selection}: Tournament selection (default tournament size $k=3$),
+      sampling without replacement and returning the individual with highest fitness.
+\item \textit{Crossover}: Applied with probability $p_c = 0.8$.
+      Three methods are implemented:
+      one-point (single cut-point), two-point (two cut-points exchanging a middle
+      segment), and uniform (each gene independently drawn from either parent with
+      equal probability).
+      If crossover is not triggered, both parents are cloned.
+\item \textit{Mutation}: Applied to each offspring after crossover.
+      Two operator categories exist:
+      \textit{per-gene operators} (random resetting, swap) mutate each gene
+      independently with probability $p_m = 0.1$;
+      \textit{whole-individual operators} (insert, scramble, inversion) fire once per
+      individual with probability $p_m$.
+      Note that $p_m$ has different semantics for these two categories, making direct
+      rate comparisons between them not straightforward.
+\item \textit{Replacement}: Two strategies are compared.
+      $(\mu{+}\lambda)$: merge parents and offspring, retain the top $\mu$ by fitness.
+      $(\mu,\lambda)$: discard parents, retain the top $\mu$ from offspring only.
+\item \textit{Termination}: After 100 generations.
+\end{enumerate}
+
+Metrics logged per generation: best fitness, mean fitness, population success rate.
+Metrics reported per run: best individual's fitness, success flag, and steps taken.
+
+\subsection{Experimental Protocol}
+
+All experiments use $n = 5$ independent runs per condition with the same globally
+fixed $8\times8$ random map.
+Results are reported as means across runs.
+Experiments~2a--2c each vary a single axis of the default configuration while holding
+all other parameters at their defaults.
+Experiment~3 independently generates new random maps for the $16\times16$ and
+$32\times32$ grid sizes.
+Default configuration: $\mu = 100$, $T_{\max} = 100$, $p_c = 0.8$, $p_m = 0.1$,
+$k = 3$, one-point crossover, random-resetting mutation, $(\mu{+}\lambda)$ strategy.
+
+% ---------------------------------------------------------------
+\section{Experimental Work}
+
+\subsection{Experiment 1: Operator Combination Comparison}
+
+\textit{Goal}: Identify which combination of crossover operator, mutation operator,
+and replacement strategy achieves the highest and most consistent fitness.
+
+\textit{Setup}: All 30 combinations ($3$ crossovers $\times$ $5$ mutations $\times$
+$2$ strategies) are tested for $n=5$ independent runs each on the same fixed
+$8\times8$ map with default rates ($p_c=0.8$, $p_m=0.1$, $\mu=100$, $k=3$).
+Source: \texttt{results/exp1\_combinations.csv}.
+
+\textit{Findings}:
+Five of thirty combinations achieve mean fitness 108.60 with standard deviation 0.00
+across all five runs: $(\mu{+}\lambda)$ + uniform + random resetting;
+$(\mu{+}\lambda)$ + uniform + swap;
+$(\mu,\lambda)$ + one-point + random resetting;
+$(\mu,\lambda)$ + two-point + random resetting; and
+$(\mu,\lambda)$ + two-point + inversion.
+All five achieve 100\% success rate and exactly 14 mean steps, matching the
+theoretical fitness maximum.
+The zero standard deviation reflects that the GA converged to the same optimal
+policy on every run---a consequence of the fully deterministic environment.
+The $t$-test between the top two configurations produced $p = \text{NaN}$, because the
+Welch $t$-test is undefined when both groups have zero variance.
+This is not a test failure; it reflects complete convergence: any run of these
+configurations on this deterministic task finds an optimal 14-step policy every time.
+The worst result was $(\mu{+}\lambda)$ + one-point + inversion
+(mean $= -7.81$, success rate $= 0\%$).
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{results/exp1_top10_barplot.png}}
+\caption{Top 10 operator combinations ranked by mean fitness over 5 runs.
+Multiple combinations tie at the maximum fitness of 108.60; configurations
+using permutation-style mutation operators cluster at the bottom.}
+\label{fig:exp1-barplot}
+\end{figure}
+
+\begin{table}[t]
+\caption{Selected Operator Combinations from Experiment~1 ($n=5$ runs each).
+Top five and three worst configurations are shown.}
+\label{tab:exp1}
+\begin{center}
+\begin{tabular}{|l|l|l|c|c|c|}
+\hline
+\textbf{Strat.} & \textbf{CX} & \textbf{Mut.} &
+\textbf{Mean F} & \textbf{Std} & \textbf{SR} \\
+\hline
+$\mu{+}\lambda$ & uniform     & rnd.\ reset & 108.60 & 0.00 & 1.00 \\
+$\mu{+}\lambda$ & uniform     & swap        & 108.60 & 0.00 & 1.00 \\
+$\mu,\lambda$   & one-point   & rnd.\ reset & 108.60 & 0.00 & 1.00 \\
+$\mu,\lambda$   & two-point   & rnd.\ reset & 108.60 & 0.00 & 1.00 \\
+$\mu,\lambda$   & two-point   & inversion   & 108.60 & 0.00 & 1.00 \\
+\hline
+$\mu{+}\lambda$ & one-point   & insert      & 38.88 & 56.94 & 0.40 \\
+$\mu,\lambda$   & one-point   & insert      & $-$7.71 & 1.43 & 0.00 \\
+$\mu{+}\lambda$ & one-point   & inversion   & $-$7.81 & 0.93 & 0.00 \\
+\hline
+\multicolumn{6}{l}{\small Strat.=strategy; CX=crossover; Mut.=mutation; SR=success rate.}
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure*}[t]
+\centerline{\includegraphics[width=\textwidth]{results/exp1_top10_convergence.png}}
+\caption{Convergence curves (mean $\pm$ std over 5 runs) for the top 10 operator combinations.
+Configurations achieving maximum fitness converge sharply within approximately 50 generations;
+lower-ranked configurations exhibit slower ascent and higher variance.}
+\label{fig:exp1-convergence}
+\end{figure*}
+
+\textit{Interpretation}:
+Uniform crossover preserves diversity by independently recombining each gene, which is
+well-suited to a tabular representation where gene position carries no intrinsic meaning.
+Random resetting directly explores the discrete action space by replacing a gene with
+a uniformly sampled value, making it the most natural mutation operator for this
+encoding.
+In contrast, insert, scramble, and inversion are permutation-style operators that
+rearrange gene order: they preserve the multiset of actions in the genotype but
+reassign which action maps to which state.
+For tabular direct encoding, rearranging assignments is generally harmful because each
+gene's fitness contribution depends on its state-index semantics, not its position
+relative to neighboring genes~\cite{b2}.
+
+\textit{Caveats}: $n=5$ runs is modest; zero-variance results reflect the deterministic
+task structure rather than universal robustness across map topologies.
+
+\subsection{Experiment 2a: Mutation Rate and Crossover Rate Sensitivity}
+
+\textit{Goal}: Map how fitness varies jointly with mutation rate and crossover rate.
+
+\textit{Setup}: Grid search over $p_m \in \{0.01, 0.05, 0.2\}$ and
+$p_c \in \{0.5, 0.7, 0.9\}$ (9 conditions, $n=5$ runs each).
+Default operator: one-point crossover, random-resetting mutation,
+$(\mu{+}\lambda)$ strategy.
+Source: \texttt{results/exp2a\_heatmap\_data.csv}.
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{results/exp2a_heatmap.png}}
+\caption{Average fitness as a function of mutation rate (rows) and crossover
+rate (columns). Low mutation ($p_m=0.01$) with low crossover ($p_c=0.5$) yields
+catastrophic failure ($-8.88$); mutation rate $\geq 0.2$ achieves peak fitness
+across all crossover rates.}
+\label{fig:exp2a}
+\end{figure}
+
+The heatmap in Fig.~\ref{fig:exp2a} reveals a clear pattern.
+At $p_m=0.01$, $p_c=0.5$, the GA fails entirely (mean $= -8.88$, 0\% success):
+minimal mutation combined with infrequent crossover means that roughly half of offspring
+per generation are exact clones of their parents, with the other half receiving only
+marginal perturbations.
+Population diversity collapses quickly, trapping the search in a low-fitness local
+optimum.
+Increasing $p_c$ to 0.7--0.9 at the same $p_m=0.01$ recovers partial performance
+(mean $\approx 61.6$), indicating that crossover can partially compensate for low
+mutation.
+At $p_m=0.2$, peak fitness (108.60) is achieved across all three crossover rates,
+suggesting that sufficient per-gene diversity maintenance from mutation makes
+crossover rate secondary.
+
+\textit{Interpretation}: This pattern is consistent with fitness landscape theory~\cite{b6}:
+the FrozenLake policy space contains sign epistasis where single-gene changes at
+critical states can drastically alter fitness.
+High mutation rates maintain the diversity required to escape such local optima;
+crossover rate matters most when mutation rate is insufficient on its own.
+
+\textit{Caveats}: Coarse three-level grid; results are specific to one-point crossover
+and random-resetting mutation.
+
+\subsection{Experiment 2b: Population Size and Tournament Size Sensitivity}
+
+\textit{Goal}: Quantify the joint effect of population size and tournament size
+(selection pressure) on GA performance.
+
+\textit{Setup}: Grid search over $\mu \in \{20, 50, 200\}$ and
+$k \in \{2, 5, 10\}$ (conditions with $k > \mu$ are omitted), $n=5$ runs each.
+Source: \texttt{results/exp2b\_sensitivity\_data.csv}.
+
+\begin{figure}[t]
+\centerline{\includegraphics[width=\columnwidth]{results/exp2b_sensitivity.png}}
+\caption{Average fitness as a function of population size (rows) and tournament
+size (columns). Tournament size $k=5$ is optimal for small populations; excessive
+selection pressure ($k=10$) causes premature convergence at small population sizes.}
+\label{fig:exp2b}
+\end{figure}
+
+As shown in Fig.~\ref{fig:exp2b}, tournament size $k=5$ with $\mu \in \{20, 50\}$
+achieves peak fitness (108.60).
+Tournament size $k=10$ with these small populations yields mean fitness $\approx 38$,
+reflecting excessive selection pressure: a tournament of 10 from a population of 20
+amounts to selecting from the top half at each step, rapidly concentrating the
+population around a few high-fitness individuals and eliminating diversity needed to
+escape local optima.
+Population $\mu=200$ is tolerant of both $k=2$ and $k=10$ (both achieve 108.60),
+likely because 200 individuals provide sufficient diversity to buffer against extreme
+selection pressures.
+The anomalous result at $\mu=200$, $k=5$ (85.17 instead of 108.60) likely reflects
+sampling variance given $n=5$.
+
+\textit{Interpretation}: Selection pressure must be matched to population size.
+The navigability analysis in~\cite{b6} predicts that loss of diversity through
+excessive selection is particularly harmful in rugged, epistatic landscapes---exactly
+the profile of the FrozenLake policy space.
+
+\textit{Caveats}: Only 5 runs per condition; the $\mu=200$, $k=5$ anomaly warrants
+further investigation.
+
+\subsection{Experiment 2c: Fitness Weight Sensitivity}
+
+\textit{Goal}: Determine how the choice of fitness weight configuration alters evolved
+behavior and final performance.
+
+\textit{Setup}: Three weight configurations tested, $n=5$ runs each.
+\textit{Standard}: $w_s=100$, $w_m=10$, $w_{\text{step}}=0.1$, $w_h=50$.
+\textit{Heavy\_Hole}: $w_h$ increased to 200.0.
+\textit{Heavy\_Step}: $w_{\text{step}}$ increased to 2.0.
+Source: \texttt{results/exp2c\_weights.csv}.
+
+\begin{table}[t]
+\caption{Fitness Weight Sensitivity: Experiment~2c Results ($n=5$ runs each)}
+\label{tab:exp2c}
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Weight Config} & \textbf{Avg Fitness} & \textbf{Succ.\ Rate} & \textbf{Avg Steps} \\
+\hline
+Standard     & 108.60   & 1.00 & 14.0 \\
+Heavy\_Hole  & 85.17    & 0.80 & 31.2 \\
+Heavy\_Step  & $-$51.29 & 0.00 & 1.0  \\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{figure*}[t]
+\centerline{\includegraphics[width=\textwidth]{results/exp2c_weights_analysis.png}}
+\caption{Effect of fitness weight configuration on success rate (left),
+average steps (center), and average fitness (right).
+The Heavy Step Penalty collapses performance to 0\% success and 1 mean step;
+the Standard configuration achieves perfect success at minimum path length.}
+\label{fig:exp2c}
+\end{figure*}
+
+Table~\ref{tab:exp2c} and Fig.~\ref{fig:exp2c} show the results.
+The standard configuration achieves perfect fitness (108.60), 100\% success, and
+14 mean steps---the minimum path length from $(0,0)$ to $(7,7)$.
+The Heavy\_Hole configuration ($w_h=200$) reduces success to 80\% with 31.2 mean
+steps, suggesting the GA evolves overly cautious policies that take longer, circuitous
+routes to avoid any proximity to holes, at the cost of overall success reliability.
+
+The Heavy\_Step configuration ($w_{\text{step}}=2.0$) is a catastrophic failure:
+0\% success, 1.0 mean steps, and mean fitness $-51.29$.
+A step penalty of 2.0 per step would incur $-256$ over 128 steps, completely
+overwhelming the positive signals.
+The GA learns to minimise steps by immediately terminating---the easiest path is to
+fall into the first adjacent hole in a single step.
+The observed mean fitness of $-51.29$ is consistent with the equation in
+\eqref{eq:fitness}: a 1-step terminal transition into a hole at state $(1,0)$
+(Manhattan distance 13 from the goal) gives
+$0 + 10/14 - 2.0 - 50.0 \approx -51.3$.
+
+\textit{Interpretation}: This is a concrete illustration of the fitness shaping
+pitfall noted by~\cite{b5}: a penalty that dominates the fitness function causes the
+GA to optimise for that component alone at the expense of the true objective.
+The standard balanced configuration is essential for reliable convergence.
+
+\textit{Caveats}: Only three weight configurations tested; intermediate values of
+$w_{\text{step}}$ between 0.1 and 2.0 were not explored.
+
+\subsection{Experiment 3: Scalability Across Grid Sizes}
+
+\textit{Goal}: Characterize how GA convergence rate and final performance change
+as grid size (and thus policy-space size) grows.
+
+\textit{Setup}: Three grid sizes---$8\times8$ (genotype length 64), $16\times16$
+(length 256), $32\times32$ (length 1024)---tested with $\mu=150$,
+$T_{\max}=150$, $n=5$ runs each.
+The $8\times8$ map uses the same global map as previous experiments; $16\times16$ and
+$32\times32$ use independently generated random maps.
+Source: \texttt{results/exp3\_scalability\_ci.png}.
+
+\begin{figure*}[t]
+\centerline{\includegraphics[width=\textwidth]{results/exp3_scalability_ci.png}}
+\caption{Scalability study: mean best fitness with shaded variability band across
+150 generations for grid sizes $8\times8$, $16\times16$, and $32\times32$
+($\mu=150$, $n=5$ runs).
+The $8\times8$ curve reaches a high-fitness plateau by approximately
+generation~20; the $16\times16$ curve improves later via step-like jumps,
+reaching a comparable plateau only after generation~100; the $32\times32$ curve
+remains near its initial fitness level throughout, indicating failure to discover
+higher-quality policies under the same budget.}
+\label{fig:exp3}
+\end{figure*}
+
+As shown in Fig.~\ref{fig:exp3}, the $8\times8$ and $16\times16$ conditions both
+achieve high final fitness, but their convergence dynamics differ substantially.
+The $8\times8$ curve stays near its initial level for the first $\approx$10
+generations, then rises sharply and reaches a plateau around $\approx$108 by
+approximately generation~20, remaining essentially flat thereafter.
+In contrast, the $16\times16$ curve stays near baseline for much longer, beginning
+to improve only around generation~50 and rising in a series of step-like
+jumps---roughly in the generation ranges 50--70, 80--90, and 100--105---before
+reaching a comparable plateau near $\approx$108 shortly after generation~100.
+
+The $32\times32$ curve, however, remains almost flat around its initial fitness level
+(approximately $-10$) across all 150 generations, with no visible sustained
+improvement.
+This indicates that for the $32\times32$ random map instance used here, the fixed
+search budget (150 individuals $\times$ 150 generations) and the default
+operator/parameter configuration were insufficient to reliably discover
+higher-quality policies.
+
+\textit{Interpretation}: With increasing genotype length ($64 \to 256 \to 1024$),
+the effective search difficulty increases sharply.
+This manifests in the plot as (i)~much later convergence for $16\times16$ relative
+to $8\times8$, and (ii)~a complete lack of progress for $32\times32$ under the same
+budget.
+This qualitative pattern is consistent with the fitness landscape perspective
+of~\cite{b6}: as dimensionality grows, beneficial mutation pathways become rarer and
+the landscape harder to navigate, making convergence increasingly dependent on larger
+evaluation budgets, better-tuned operator rates, and/or adaptive operator/parameter
+control~\cite{b3,b4}.
+
+\textit{Caveats}: The $16\times16$ and $32\times32$ conditions use independently
+generated random maps, so grid-size effects are confounded with map-instance
+difficulty; the flat $32\times32$ curve may reflect an unusually difficult map
+instance rather than grid size alone.
+Additionally, the shaded regions reflect variability across only 5 runs and should
+be interpreted as indicative rather than as definitive confidence intervals.
+A stronger scalability conclusion would require multiple random map instances per
+size and a generation budget scaled with genotype length.
+
+% ---------------------------------------------------------------
+\section{Conclusion and Discussion}
+
+\textbf{Key Empirical Findings}:
+\begin{itemize}
+\item Five of thirty tested operator combinations achieve the theoretical maximum
+      fitness (108.60, 100\% success, 14 mean steps) with zero variance across five
+      independent runs.
+      Per-gene mutation operators (random resetting, swap) dominate successful
+      configurations; whole-individual positional operators (insert, scramble,
+      inversion) are generally poorly suited to the tabular direct encoding.
+\item Operator semantics matter independently of rate: insert, scramble, and inversion
+      rearrange gene positions rather than replacing gene values, making them
+      structurally mismatched to a representation where gene identity---not position---
+      carries all policy information.
+\item Mutation rate is the primary diversity-maintenance lever.
+      A rate of 0.2 achieves peak fitness across all tested crossover rates; at 0.01,
+      fitness is critically sensitive to crossover rate and can collapse to $-8.88$.
+\item Tournament size must be matched to population size.
+      Tournament size 10 with populations of 20--50 causes premature convergence
+      (mean fitness $\approx 38$); tournament size 5 is optimal for these smaller
+      populations.
+\item Fitness shaping balance is as critical as operator design.
+      An aggressive step penalty (2.0 per step) entirely destroys convergence,
+      reducing success to 0\% and evolving policies that immediately self-terminate.
+\item The scalability study reveals qualitatively distinct convergence regimes:
+      $8\times8$ converges rapidly by generation~20, $16\times16$ converges via
+      step-like jumps reaching a comparable high-fitness plateau only after
+      generation~100, and $32\times32$ shows no meaningful improvement within the
+      same 150-generation budget, demonstrating that search difficulty grows sharply
+      with genotype length.
+\end{itemize}
+
+\textbf{Limitations}:
+\begin{itemize}
+\item $n=5$ runs per condition is modest; higher-variance configurations may require
+      20--30 runs for reliable statistical conclusions.
+\item All experiments share one fixed random $8\times8$ map; results may not
+      generalise to other map topologies.
+\item The mutation rate parameter has different semantic interpretations for per-gene
+      and whole-individual operators, confounding direct comparisons between these
+      operator classes.
+\item Experiment~3 uses different maps for $16\times16$ and $32\times32$, so
+      grid-size effects and map-instance difficulty are confounded; the flat
+      $32\times32$ curve may reflect an unusually difficult map instance rather
+      than grid size alone. Additionally, the shaded variability bands reflect
+      only 5 runs and are indicative rather than definitive confidence intervals.
+\end{itemize}
+
+\textbf{Future Work}:
+\begin{itemize}
+\item Replace fixed-rate operator selection with an adaptive RL-based scheme
+      trained on the empirical baselines established in Experiments~1--2, following
+      the RL-EA framework of~\cite{b3,b4}.
+\item Extend Experiment~3 to test multiple random map instances per grid size,
+      separating topology effects from scaling effects.
+\item Normalise mutation magnitude across operator types (e.g., fix the expected
+      number of changed genes) to enable fair comparisons between per-gene and
+      whole-individual operators.
+\item Investigate multi-episode evaluation with a stochastic map
+      (\texttt{is\_slippery=True}) to test policy robustness under uncertainty.
+\item Explore intermediate fitness weight values (especially $w_{\text{step}}$
+      between 0.1 and 2.0) to identify the threshold at which the step penalty
+      becomes counterproductive.
+\end{itemize}
+
+% ---------------------------------------------------------------
+\section*{AI Usage Statement}
+Cursor AI (powered by Claude) was used for two purposes in this project:
+code assistance during implementation (GA operator structures, experiment orchestration,
+and result plotting), and report drafting (section structuring and language editing).
+All AI-generated code was verified by running the full experiment suite and inspecting
+output files.
+All numerical claims in this report were verified directly against
+\texttt{results/*.csv} files and source code; no AI-stated values were accepted
+without confirmation from source files.
+Experimental design, result interpretation, and conclusions were determined by the
+project team.
+
+% ---------------------------------------------------------------
+\section*{Data Availability}
+The source code, configuration file (\texttt{config.json}), and experimental results
+that support the findings of this paper are included in the submitted project package.
+All result plots (\texttt{.png}) and numerical summaries (\texttt{.csv}) are located
+in the \texttt{results/} directory.
+The configuration file specifies all hyperparameters exactly as used in the
+experiments.
+
+% ---------------------------------------------------------------
+\section*{Member Contributions}
+[To be completed by group members.]
+
+% ---------------------------------------------------------------
+\begin{thebibliography}{00}
+
+\bibitem{b1}
+S. Whiteson, ``Evolutionary computation for reinforcement
+learning,'' in \textit{Reinforcement Learning: State-of-the-Art},
+Springer, 2012, pp.~325--355.
+
+\bibitem{b2}
+T. Faycal and C. Zito, ``Direct mutation and crossover in
+genetic algorithms applied to reinforcement learning tasks,''
+\textit{arXiv preprint} arXiv:2201.04815, 2022.
+
+\bibitem{b3}
+Y. Song, Y. Wu, Y. Guo, R. Yan, P.~N. Suganthan, Y. Zhang,
+W. Pedrycz, S. Das, R. Mallipeddi, O.~S. Ajani, and Q. Feng,
+``Reinforcement learning-assisted evolutionary algorithm:
+A survey and research opportunities,''
+\textit{Swarm Evol. Comput.}, vol.~86, p.~101517, 2024.
+
+\bibitem{b4}
+J. Ma, W. Gao, and W. Tong, ``A deep reinforcement learning
+assisted adaptive genetic algorithm for flexible job shop
+scheduling,'' \textit{Eng. Appl. Artif. Intell.}, vol.~149,
+p.~110447, 2025.
+
+\bibitem{b5}
+Z. Zhu, Z. Chen, C. Zhu, W. Si, and F. Wang, ``Optimizing
+potential-based reward automata in partially observable
+reinforcement learning using genetic local search,''
+\textit{Eng. Appl. Artif. Intell.}, vol.~169, p.~114054, 2026.
+
+\bibitem{b6}
+M. Srivastava, C. Bank, J. Krug, and S.~G. Das, ``Evolution
+as fitness landscape navigation: Concepts, measures, and
+emerging questions,'' \textit{arXiv preprint}
+arXiv:2604.17036, 2026.
+
+\end{thebibliography}
+
+\end{document}
