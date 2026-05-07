@@ -7,6 +7,7 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{multirow}
+\usepackage{stfloats}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
@@ -15,24 +16,29 @@
 \title{Evolving Navigation Policies for FrozenLake-v1 Using Genetic Algorithms:\\
 An Empirical Study of Operator Selection, Parameter Sensitivity, and Fitness Shaping}
 
-\author{
-\IEEEauthorblockN{[Author 1]}
-\IEEEauthorblockA{\textit{[Department]} \\
-\textit{[Institution]}\\
-[City, Country] \\
-[email]}
+\author{\IEEEauthorblockN{Arda Çağan Keser}
+\IEEEauthorblockA{\textit{Computer Engineering Department} \\
+\textit{Ege University}\\
+İzmir, Turkey \\
+05240000811@ogrenci.ege.edu.tr}
 \and
-\IEEEauthorblockN{[Author 2]}
-\IEEEauthorblockA{\textit{[Department]} \\
-\textit{[Institution]}\\
-[City, Country] \\
-[email]}
+\IEEEauthorblockN{Osman Oğuz Erol}
+\IEEEauthorblockA{\textit{Computer Engineering Department} \\
+\textit{Ege University}\\
+İzmir, Turkey \\
+05240000814@ogrenci.ege.edu.tr}
 \and
-\IEEEauthorblockN{[Author 3]}
-\IEEEauthorblockA{\textit{[Department]} \\
-\textit{[Institution]}\\
-[City, Country] \\
-[email]}
+\IEEEauthorblockN{Utkan Keser}
+\IEEEauthorblockA{\textit{Computer Engineering Department} \\
+\textit{Ege University}\\
+İzmir, Turkey \\
+05240000826@ogrenci.ege.edu.tr}
+\and
+\IEEEauthorblockN{Shahram Saraeipour}
+\IEEEauthorblockA{\textit{Computer Engineering Department} \\
+\textit{Ege University}\\
+İzmir, Turkey \\
+05220001308@ogrenci.ege.edu.tr}
 }
 
 \maketitle
@@ -318,7 +324,7 @@ configurations on this deterministic task finds an optimal 14-step policy every 
 The worst result was $(\mu{+}\lambda)$ + one-point + inversion
 (mean $= -7.81$, success rate $= 0\%$).
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{results/exp1_top10_barplot.png}}
 \caption{Top 10 operator combinations ranked by mean fitness over 5 runs.
 Multiple combinations tie at the maximum fitness of 108.60; configurations
@@ -326,7 +332,7 @@ using permutation-style mutation operators cluster at the bottom.}
 \label{fig:exp1-barplot}
 \end{figure}
 
-\begin{table}[t]
+\begin{table}[htbp]
 \caption{Selected Operator Combinations from Experiment~1 ($n=5$ runs each).
 Top five and three worst configurations are shown.}
 \label{tab:exp1}
@@ -351,7 +357,7 @@ $\mu{+}\lambda$ & one-point   & inversion   & $-$7.81 & 0.93 & 0.00 \\
 \end{center}
 \end{table}
 
-\begin{figure*}[t]
+\begin{figure*}[!t]
 \centerline{\includegraphics[width=\textwidth]{results/exp1_top10_convergence.png}}
 \caption{Convergence curves (mean $\pm$ std over 5 runs) for the top 10 operator combinations.
 Configurations achieving maximum fitness converge sharply within approximately 50 generations;
@@ -385,7 +391,7 @@ Default operator: one-point crossover, random-resetting mutation,
 $(\mu{+}\lambda)$ strategy.
 Source: \texttt{results/exp2a\_heatmap\_data.csv}.
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{results/exp2a_heatmap.png}}
 \caption{Average fitness as a function of mutation rate (rows) and crossover
 rate (columns). Low mutation ($p_m=0.01$) with low crossover ($p_c=0.5$) yields
@@ -426,7 +432,7 @@ and random-resetting mutation.
 $k \in \{2, 5, 10\}$ (conditions with $k > \mu$ are omitted), $n=5$ runs each.
 Source: \texttt{results/exp2b\_sensitivity\_data.csv}.
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{results/exp2b_sensitivity.png}}
 \caption{Average fitness as a function of population size (rows) and tournament
 size (columns). Tournament size $k=5$ is optimal for small populations; excessive
@@ -466,7 +472,7 @@ behavior and final performance.
 \textit{Heavy\_Step}: $w_{\text{step}}$ increased to 2.0.
 Source: \texttt{results/exp2c\_weights.csv}.
 
-\begin{table}[t]
+\begin{table}[htbp]
 \caption{Fitness Weight Sensitivity: Experiment~2c Results ($n=5$ runs each)}
 \label{tab:exp2c}
 \begin{center}
@@ -482,7 +488,7 @@ Heavy\_Step  & $-$51.29 & 0.00 & 1.0  \\
 \end{center}
 \end{table}
 
-\begin{figure*}[t]
+\begin{figure*}[!t]
 \centerline{\includegraphics[width=\textwidth]{results/exp2c_weights_analysis.png}}
 \caption{Effect of fitness weight configuration on success rate (left),
 average steps (center), and average fitness (right).
@@ -529,8 +535,8 @@ The $8\times8$ map uses the same global map as previous experiments; $16\times16
 $32\times32$ use independently generated random maps.
 Source: \texttt{results/exp3\_scalability\_ci.png}.
 
-\begin{figure*}[t]
-\centerline{\includegraphics[width=\textwidth]{results/exp3_scalability_ci.png}}
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{results/exp3_scalability_ci.png}}
 \caption{Scalability study: mean best fitness with shaded variability band across
 150 generations for grid sizes $8\times8$, $16\times16$, and $32\times32$
 ($\mu=150$, $n=5$ runs).
@@ -540,7 +546,7 @@ reaching a comparable plateau only after generation~100; the $32\times32$ curve
 remains near its initial fitness level throughout, indicating failure to discover
 higher-quality policies under the same budget.}
 \label{fig:exp3}
-\end{figure*}
+\end{figure}
 
 As shown in Fig.~\ref{fig:exp3}, the $8\times8$ and $16\times16$ conditions both
 achieve high final fitness, but their convergence dynamics differ substantially.
@@ -648,21 +654,29 @@ size and a generation budget scaled with genotype length.
 
 % ---------------------------------------------------------------
 \section*{AI Usage Statement}
-Cursor AI (powered by Claude) was used for two purposes in this project:
-code assistance during implementation (GA operator structures, experiment orchestration,
-and result plotting), and report drafting (section structuring and language editing).
-All AI-generated code was verified by running the full experiment suite and inspecting
-output files.
-All numerical claims in this report were verified directly against
-\texttt{results/*.csv} files and source code; no AI-stated values were accepted
-without confirmation from source files.
-Experimental design, result interpretation, and conclusions were determined by the
-project team.
+Generative AI tools (Gemini, Claude) were used as assistive supports throughout
+the project, without delegating full implementation to the model.
+Specifically, AI was used (i)~during the initial phase to review selected references
+and facilitate brainstorming about problem framing, fitness shaping, and experiment
+design; (ii)~as a consultant to discuss hyperparameter choices (e.g., population size,
+mutation/crossover rates, tournament size) and replacement strategies;
+(iii)~for troubleshooting and debugging when the team encountered uncertain
+implementation issues (e.g., operator semantics, edge cases, or unexpected
+experimental behavior); and (iv)~to help refine the presentation of plots and tables
+and to edit and restructure the report text, including converting the finalized content
+into IEEE-compliant \LaTeX{}.
+
+All AI suggestions and drafted text were critically reviewed, discussed, and verified
+by the group.
+Every numerical claim was cross-checked against the source code and the generated
+files under \texttt{results/}.
+The final methodological decisions, code, experiments, and interpretations are the
+authors' own.
 
 % ---------------------------------------------------------------
 \section*{Data Availability}
 The source code, configuration file (\texttt{config.json}), and experimental results
-that support the findings of this paper are included in the submitted project package.
+that support the findings of this paper are included in the project package.
 All result plots (\texttt{.png}) and numerical summaries (\texttt{.csv}) are located
 in the \texttt{results/} directory.
 The configuration file specifies all hyperparameters exactly as used in the
@@ -670,7 +684,32 @@ experiments.
 
 % ---------------------------------------------------------------
 \section*{Member Contributions}
-[To be completed by group members.]
+
+\textbf{Arda Çağan Keser} led the core technical development of the project.
+His responsibilities included project conceptualization and problem formulation;
+implementation of the environment interface and the multi-component fitness function;
+development of the full GA pipeline (population initialization, evaluation loop,
+tournament selection, and both replacement strategies); design and implementation of
+all five experiments; execution of all experimental runs; and primary analysis and
+interpretation of results.
+He also authored the Methodology and Experimental Work sections of this report.
+
+\textbf{Osman Oğuz Erol} was responsible for the implementation of all three
+crossover operators (one-point, two-point, and uniform crossover); development of the
+visualization and result-plotting scripts; and hyperparameter configuration.
+He also authored the Abstract and Introduction sections of this report.
+
+\textbf{Utkan Keser} was responsible for the implementation of all five
+mutation operators (random resetting, swap, insert, scramble, and inversion); design
+and execution of the statistical test (Welch \textit{t}-test); and literature search
+and citation management.
+He also authored the Literature Review and Conclusion and Discussion sections of this
+report.
+
+\textbf{Shahram Saraeipour} contributed to initial topic selection and
+problem scoping discussions, performed spot-checks on selected experimental outputs,
+assisted with minor debugging during implementation, and reviewed the final \LaTeX{}
+report formatting.
 
 % ---------------------------------------------------------------
 \begin{thebibliography}{00}
