@@ -57,10 +57,12 @@ class Environment:
         
         manhattan_dist = abs(self.goal_pos[0] - final_r) + abs(self.goal_pos[1] - final_c)
 
-        fitness = (success * weights['success']) + \
-                  (weights['manhattan_multiplier'] / (1 + manhattan_dist)) - \
-                  (steps * weights['step_penalty']) - \
-                  (fell_into_hole * weights['hole_penalty'])
+        fitness = (
+            (success * weights["success"])
+            + (weights["manhattan_multiplier"] / (1 + manhattan_dist))
+            - (steps * weights["step_penalty"])
+            - (fell_into_hole * weights["hole_penalty"])
+        )
 
         if render:
             return fitness, success, steps, frames
