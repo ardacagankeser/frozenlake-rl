@@ -2,9 +2,10 @@ import gymnasium as gym
 from gymnasium.envs.toy_text.frozen_lake import generate_random_map
 
 class Environment:
-    def __init__(self, size=4, desc=None, render_mode=None):
+    def __init__(self, size=4, desc=None, is_slippery=False, render_mode=None):
         self.size = size
         self.render_mode = render_mode
+        self.is_slippery = is_slippery
         
         if desc is not None:
             self.map_name = None
@@ -19,9 +20,15 @@ class Environment:
             self.map_name = None
             self.desc = generate_random_map(size=size)
             
-        self.env = gym.make('FrozenLake-v1', desc=self.desc, map_name=self.map_name, is_slippery=False, render_mode=self.render_mode)
+        self.env = gym.make('FrozenLake-v1', desc=self.desc, map_name=self.map_name, is_slippery=self.is_slippery, render_mode=self.render_mode)
         self.goal_pos = (size - 1, size - 1)
         self.max_steps = size * size * 2
+
+    def reset(self):
+        return self.env.reset()
+
+    def step(self, action):
+        return self.env.step(action)
 
     def get_genotype_length(self):
         return self.size * self.size

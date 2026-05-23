@@ -1,0 +1,5 @@
+Architecture,Layers,Learning_Rate,Final_Success_Rate,Final_Loss,Avg_Steps_Final_100
+Narrow_Shallow,[32],0.001,0.98,0.5092031809368304,14.15
+Standard_Deep,"[64, 64]",0.001,0.0,0.009491827579331584,84.61
+Wide_Deep,"[128, 64]",0.001,0.0,0.0038959885621443393,80.33
+Standard_Deep_FastLR,"[64, 64]",0.005,0.0,0.014201458295574412,78.63

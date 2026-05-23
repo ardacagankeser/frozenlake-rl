@@ -14,6 +14,26 @@
         "step_penalty": 0.1,
         "hole_penalty": 50.0
     },
+    "q_learning": {
+        "learning_rate": 0.1,
+        "discount_factor": 0.95,
+        "initial_epsilon": 1.0,
+        "min_epsilon": 0.01,
+        "decay_rate": 0.005,
+        "total_episodes": 1000
+    },
+    "dqn": {
+        "hidden_dims": [64, 64],
+        "learning_rate": 0.001,
+        "discount_factor": 0.95,
+        "buffer_size": 10000,
+        "batch_size": 64,
+        "target_update_freq": 100,
+        "initial_epsilon": 1.0,
+        "min_epsilon": 0.01,
+        "decay_rate": 0.01,
+        "total_episodes": 500
+    },
     "exp2_mutation_rates": [
         0.01,
         0.05,

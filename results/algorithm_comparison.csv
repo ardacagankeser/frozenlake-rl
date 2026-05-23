@@ -1,0 +1,19 @@
+Map_Size,Mode,Algorithm,Success_Rate,Avg_Steps,Sample_Complexity
+4x4,Deterministic,Genetic Algorithm,1.0,6.0,10000
+4x4,Deterministic,Tabular Q-Learning,1.0,6.0,1000
+4x4,Deterministic,DQN (Deep RL),1.0,6.0,500
+4x4,Slippery,Genetic Algorithm,1.0,6.0,10000
+4x4,Slippery,Tabular Q-Learning,0.34,20.352941176470587,2000
+4x4,Slippery,DQN (Deep RL),0.34,18.058823529411764,1000
+8x8,Deterministic,Genetic Algorithm,0.0,100.0,10000
+8x8,Deterministic,Tabular Q-Learning,1.0,14.0,1000
+8x8,Deterministic,DQN (Deep RL),1.0,14.0,500
+8x8,Slippery,Genetic Algorithm,1.0,27.0,10000
+8x8,Slippery,Tabular Q-Learning,0.36,70.44444444444444,2000
+8x8,Slippery,DQN (Deep RL),0.0,128.0,1000
+16x16,Deterministic,Genetic Algorithm,0.0,100.0,10000
+16x16,Deterministic,Tabular Q-Learning,1.0,30.0,1000
+16x16,Deterministic,DQN (Deep RL),0.0,512.0,500
+16x16,Slippery,Genetic Algorithm,0.0,100.0,10000
+16x16,Slippery,Tabular Q-Learning,0.0,512.0,2000
+16x16,Slippery,DQN (Deep RL),0.0,512.0,1000

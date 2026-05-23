@@ -1,2 +1,2 @@
-T-Test between mu_plus_lambda_uniform_random_resetting and mu_plus_lambda_uniform_swap
-P-Value: nan
+T-Test between mu_plus_lambda_one_point_random_resetting and mu_plus_lambda_two_point_random_resetting
+P-Value: 1.0
